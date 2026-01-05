@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CrazyAlarm</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #f8fafc;
+            font-family: 'Poppins', 'Hind Siliguri', sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        h2 { margin-bottom: 1.5rem; font-weight: 600; color: #fff; }
+
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        input[type="time"] {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="time"]:focus { border-color: var(--primary); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        #enableBtn { background: var(--primary); color: white; }
+        #setBtn { background: var(--success); color: white; }
+        #stopBtn { background: var(--danger); color: white; display: none; }
+        
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .mission-box {
+            background: #0f172a;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-top: 1.5rem;
+            display: none;
+            border: 1px dashed var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+
+        #ans {
+            width: 80%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: white;
+            text-align: center;
+        }
+
+        .msg { margin-top: 10px; font-size: 0.9rem; }
+        .error { color: var(--danger); }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <div id="status" class="status-badge">অডিও আনলক করুন</div>
+    <h2>CrazyAlarm</h2>
+
+    <button id="enableBtn">🔊 Enable Sound</button>
+
+    <div style="text-align: left;">
+        <label style="font-size: 0.9rem; color: #94a3b8;">Set Time</label>
+        <input type="time" id="time">
+    </div>
+
+    <button id="setBtn">Set Alarm</button>
+    <button id="stopBtn">Stop Alarm</button>
+
+    <div class="mission-box" id="mission">
+        <h3 style="color: var(--danger); margin-top: 0;">⚠ Mission Task</h3>
+        <p id="task" style="font-size: 1.1rem;"></p>
+        <div id="inputBox"></div>
+        <div id="msg" class="msg"></div>
+    </div>
+</div>
+
+<audio id="sound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" loop></audio>
+
+<script>
+    const state = {
+        audioReady: false,
+        alarmTime: null,
+        answer: null,
+        isArmed: false
+    };
+
+    const elements = {
+        enableBtn: document.getElementById("enableBtn"),
+        timeInput: document.getElementById("time"),
+        setBtn: document.getElementById("setBtn"),
+        stopBtn: document.getElementById("stopBtn"),
+        mission: document.getElementById("mission"),
+        task: document.getElementById("task"),
+        inputBox: document.getElementById("inputBox"),
+        msg: document.getElementById("msg"),
+        sound: document.getElementById("sound"),
+        status: document.getElementById("status")
+    };
+
+    // --- Audio Unlock ---
+    elements.enableBtn.onclick = () => {
+        elements.sound.play().then(() => {
+            elements.sound.pause();
+            elements.sound.currentTime = 0;
+            state.audioReady = true;
+            elements.enableBtn.style.display = "none";
+            elements.status.innerText = "অডিও সক্রিয় ✅";
+            elements.status.style.color = "#10b981";
+        }).catch(() => {
+            alert("অনুগ্রহ করে স্ক্রিনে একবার ক্লিক করে পুনরায় বাটনটি চাপুন।");
+        });
+    };
+
+    // --- Time Utility ---
+    const getCurrentTime = () => {
+        const now = new Date();
+        return now.getHours().toString().padStart(2, '0') + ":" + 
+               now.getMinutes().toString().padStart(2, '0');
+    };
+
+    // --- Missions Logic ---
+    const missions = {
+        math: () => {
+            const a = Math.floor(Math.random() * 20 + 5);
+            const b = Math.floor(Math.random() * 20 + 5);
+            state.answer = a + b;
+            elements.task.innerText = `Solve: ${a} + ${b} = ?`;
+            elements.inputBox.innerHTML = `<input type="number" id="ans" placeholder="উত্তর লিখুন"><button onclick="checkAnswer()" style="margin-top:10px; background:var(--primary)">Submit</button>`;
+        },
+        memory: () => {
+            const words = ["সকাল", "সূর্য", "জাগরণ", "সাফল্য", "সময়"];
+            const word = words[Math.floor(Math.random() * words.length)];
+            state.answer = word;
+            elements.task.innerHTML = `নিচের শব্দটি লিখুন:<br><strong>"${word}"</strong>`;
+            elements.inputBox.innerHTML = `<input type="text" id="ans" placeholder="টাইপ করুন..."><button onclick="checkAnswer()" style="margin-top:10px; background:var(--primary)">Submit</button>`;
+        },
+        tap: () => {
+            let count = 0, target = 10;
+            elements.task.innerText = `${target} বার ট্যাপ করুন!`;
+            elements.inputBox.innerHTML = `<button id="tapAction" style="background:#f59e0b">TAP (${count}/${target})</button>`;
+            document.getElementById("tapAction").onclick = function() {
+                count++;
+                this.innerText = `TAP (${count}/${target})`;
+                if(count >= target) completeMission();
+            };
+        }
+    };
+
+    // --- Alarm Control ---
+    elements.setBtn.onclick = () => {
+        if (!state.audioReady) return alert("আগে অডিও এনাবেল করুন!");
+        if (!elements.timeInput.value) return alert("সময় সেট করুন!");
+        
+        state.alarmTime = elements.timeInput.value;
+        state.isArmed = true;
+        elements.status.innerText = `অ্যালার্ম সেট করা হয়েছে: ${state.alarmTime}`;
+        alert("অ্যালার্ম সফলভাবে সেট করা হয়েছে! ⏰");
+    };
+
+    setInterval(() => {
+        if (state.isArmed && getCurrentTime() === state.alarmTime) {
+            state.isArmed = false;
+            triggerAlarm();
+        }
+    }, 1000);
+
+    function triggerAlarm() {
+        elements.sound.play();
+        elements.stopBtn.style.display = "block";
+        elements.mission.style.display = "block";
+        elements.setBtn.style.display = "none";
+        
+        const types = Object.keys(missions);
+        const randomType = types[Math.floor(Math.random() * types.length)];
+        missions[randomType]();
+    }
+
+    window.checkAnswer = () => {
+        const userVal = document.getElementById("ans").value.trim();
+        if (userVal == state.answer) {
+            completeMission();
+        } else {
+            elements.msg.innerHTML = `<span class="error">ভুল উত্তর, আবার চেষ্টা করুন!</span>`;
+        }
+    };
+
+    function completeMission() {
+        elements.sound.pause();
+        elements.sound.currentTime = 0;
+        elements.mission.style.display = "none";
+        elements.stopBtn.style.display = "none";
+        elements.setBtn.style.display = "block";
+        elements.status.innerText = "মিশন সফল! শুভ সকাল।";
+        alert("অভিনন্দন! মিশন সফল। 🎉");
+    }
+
+    elements.stopBtn.onclick = () => alert("আগে মিশনটি পূরণ করুন!");
+
+</script>
+</body>
+</html>
