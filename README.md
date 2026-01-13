@@ -1,2 +1,2 @@
 # CrazyAlarm
-Alarm Application
+Psychological Alarm Application Prototype
