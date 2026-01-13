@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CrazyAlarm</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glow-cyan: #00f3ff;
+            --glow-pink: #ff00ff;
+            --glow-green: #39ff14;
+            --dark-space: #020202;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Orbitron', sans-serif; }
+
+        body {
+            background: var(--dark-space);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            /* Neon Grid Background */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Ultimate Neon Container */
+        .neon-container {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid var(--glow-cyan);
+            border-radius: 20px;
+            padding: 40px 25px;
+            text-align: center;
+            box-shadow: 0 0 20px var(--glow-cyan), inset 0 0 15px var(--glow-cyan);
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--glow-cyan);
+            text-shadow: 0 0 10px var(--glow-cyan), 0 0 30px var(--glow-cyan);
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        /* Neon Input Fields */
+        input[type="time"], input[type="number"], input[type="text"] {
+            background: transparent;
+            border: 2px solid var(--glow-pink);
+            color: var(--glow-pink);
+            font-size: 2rem;
+            padding: 15px;
+            border-radius: 10px;
+            width: 100%;
+            outline: none;
+            text-align: center;
+            text-shadow: 0 0 10px var(--glow-pink);
+            box-shadow: 0 0 15px var(--glow-pink), inset 0 0 5px var(--glow-pink);
+            margin-bottom: 25px;
+        }
+
+        /* Glowing Buttons */
+        .glow-btn {
+            background: transparent;
+            border: 2px solid var(--glow-green);
+            color: var(--glow-green);
+            padding: 18px;
+            width: 100%;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-shadow: 0 0 10px var(--glow-green);
+            box-shadow: 0 0 15px var(--glow-green), inset 0 0 5px var(--glow-green);
+            transition: 0.3s;
+        }
+
+        .glow-btn:hover {
+            background: var(--glow-green);
+            color: #000;
+            box-shadow: 0 0 40px var(--glow-green);
+        }
+
+        /* Stroop Buttons */
+        .stroop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .stroop-btn {
+            border: 2px solid var(--glow-cyan);
+            background: transparent;
+            color: var(--glow-cyan);
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-shadow: 0 0 5px var(--glow-cyan);
+            box-shadow: 0 0 10px var(--glow-cyan);
+            cursor: pointer;
+        }
+
+        /* Progress Bar */
+        .charge-box { width: 100%; height: 25px; border: 1px solid var(--glow-pink); margin: 20px 0; border-radius: 5px; overflow: hidden; }
+        .charge-fill { height: 100%; background: var(--glow-pink); box-shadow: 0 0 20px var(--glow-pink); width: 0%; transition: 0.2s; }
+
+        .hidden { display: none; }
+        #alert-msg { color: #ff0000; text-shadow: 0 0 10px #ff0000; margin-top: 15px; font-size: 0.8rem; height: 20px; }
+        
+        /* Scanline Animation */
+        .scanline {
+            width: 100%; height: 2px; background: rgba(0, 243, 255, 0.2);
+            position: absolute; top: 0; left: 0;
+            animation: moveScan 4s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes moveScan { from { top: 0; } to { top: 100%; } }
+
+    </style>
+</head>
+<body>
+
+<div class="neon-container">
+    <div class="scanline"></div>
+    
+    <div id="setup-screen">
+        <h1>CrazyAlarm</h1>
+        <input type="time" id="alarm-time">
+        <button class="glow-btn" onclick="armSystem()">Trigger</button>
+    </div>
+
+    <div id="mission-screen" class="hidden">
+        <div id="mission-content"></div>
+        <div id="alert-msg"></div>
+    </div>
+</div>
+
+<audio id="alarm-sound" loop>
+    <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg">
+</audio>
+
+<script>
+    let timer;
+    const sound = document.getElementById('alarm-sound');
+
+    function armSystem() {
+        const time = document.getElementById('alarm-time').value;
+        if (!time) return;
+
+        // Unlock Sound
+        sound.play().then(() => { sound.pause(); sound.currentTime = 0; });
+        
+        document.querySelector('h1').innerText = "Alarm";
+        document.querySelector('.glow-btn').innerText = "MONITORING...";
+        document.querySelector('.glow-btn').disabled = true;
+
+        timer = setInterval(() => {
+            const now = new Date();
+            const cur = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            if (cur === time) { clearInterval(timer); startAlarm(); }
+        }, 1000);
+    }
+
+    function startAlarm() {
+        sound.play();
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('mission-screen').classList.remove('hidden');
+        mathTask();
+    }
+
+    // Task 1: Math
+    function mathTask() {
+        const n1 = Math.floor(Math.random() * 70) + 30;
+        const n2 = Math.floor(Math.random() * 30) + 20;
+        render(`
+            <h2 style="color:var(--glow-cyan); margin-bottom:20px;">MATH PROMPT</h2>
+            <div style="font-size:3rem; color:var(--glow-cyan); text-shadow: 0 0 20px var(--glow-cyan); margin-bottom:20px;">${n1} + ${n2}</div>
+            <input type="number" id="ans" placeholder="?">
+            <button class="glow-btn" onclick="checkMath(${n1+n2})">VERIFY</button>
+        `);
+    }
+
+    function checkMath(res) {
+        if (document.getElementById('ans').value == res) typeTask();
+        else showError("ERROR: BRAIN OFFLINE");
+    }
+
+    // Task 2: Typing
+    function typeTask() {
+        const text = "WAKE UP NOW";
+        render(`
+            <h2 style="color:var(--glow-pink); margin-bottom:20px;">SYNC</h2>
+            <p style="color:var(--glow-pink); margin-bottom:10px;">TYPE: ${text}</p>
+            <input type="text" id="t-ans" placeholder="...">
+            <button class="glow-btn" style="border-color:var(--glow-pink); color:var(--glow-pink); box-shadow: 0 0 15px var(--glow-pink);" onclick="checkType('${text}')">SYNC</button>
+        `);
+    }
+
+    function checkType(orig) {
+        if (document.getElementById('t-ans').value.toUpperCase() === orig) stroopTask();
+        else showError("SYNC FAILED");
+    }
+
+    // Task 3: Stroop
+    function stroopTask() {
+        const colors = ["RED", "BLUE", "GREEN", "YELLOW"];
+        const hex = ["#ff00ff", "#00f3ff", "#39ff14", "#ffff00"];
+        const target = Math.floor(Math.random() * 4);
+        render(`
+            <h2 style="color:var(--glow-cyan); margin-bottom:10px;">COLOR OVERRIDE</h2>
+            <h1 style="color:${hex[target]}; font-size:4rem; margin-bottom:20px;">${colors[Math.floor(Math.random()*4)]}</h1>
+            <div class="stroop-grid">
+                ${colors.map((c, i) => `<button class="stroop-btn" onclick="checkStroop(${target}, ${i})">${c}</button>`).join('')}
+            </div>
+        `);
+    }
+
+    function checkStroop(t, c) {
+        if (t === c) shakeTask();
+        else { showError("LOGIC VOID"); stroopTask(); }
+    }
+
+    // Task 4: Physical
+    function shakeTask() {
+        let p = 0;
+        render(`
+            <h2 style="color:var(--glow-green); margin-bottom:20px;">CHARGE ENERGY</h2>
+            <div class="charge-box"><div class="charge-fill" id="bar"></div></div>
+            <button class="glow-btn" onclick="fill()">TAP TO POWER UP</button>
+        `);
+        window.fill = () => {
+            p += 20;
+            document.getElementById('bar').style.width = p + "%";
+            if (p >= 100) finish();
+        };
+    }
+
+    function finish() {
+        sound.pause();
+        render(`
+            <h1 style="color:var(--glow-green); font-size:1rem;">Congratulation</h1>
+            <p style="color:var(--glow-green); text-shadow:0 0 10px var(--glow-green);">Good Morning :-) </p>
+            <button class="glow-btn" style="margin-top:30px;" onclick="location.reload()">DISMISS</button>
+        `);
+    }
+
+    function render(html) { document.getElementById('mission-content').innerHTML = html; document.getElementById('alert-msg').innerText = ""; }
+    function showError(m) { document.getElementById('alert-msg').innerText = m; }
+</script>
+
+</body>
+</html>
